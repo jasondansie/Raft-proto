@@ -1,0 +1,18 @@
+{
+    "name": "RaftProto.Building",
+    "rootNamespace": "RaftProto.Building",
+    "references": [
+        "RaftProto.Core",
+        "RaftProto.Items",
+        "RaftProto.Raft"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

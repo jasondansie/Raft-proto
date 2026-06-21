@@ -1,0 +1,17 @@
+{
+    "name": "RaftProto.UI",
+    "rootNamespace": "RaftProto.UI",
+    "references": [
+        "RaftProto.Core",
+        "RaftProto.Items"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
