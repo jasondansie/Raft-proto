@@ -18,6 +18,57 @@ This is a good starting point: infrastructure is ready, and every system will be
 
 ---
 
+## Build Progress — Resume Here
+
+> Snapshot of what's actually built so you can continue on another machine. **Commit & push everything (including `Assets/Scripts/**` and `Assets/Materials/M_Ocean.mat`) before switching.** Unity will rebuild `Library/` on the new machine; empty asset folders (`Prefabs`, `Data`, `Art`) won't be in git until they contain assets — that's fine.
+
+**Currently mid Phase 1.3 (player controller).** Next action: test player walking, then do **Phase 1.4 (follow camera)**.
+
+### Decisions locked in
+
+- **Networking:** Netcode for GameObjects, host/client, server-authoritative. **Not installed yet** — deferred to Phase 6.
+- **Assemblies:** one asmdef per system (see below). Networking sits at the top of the dependency graph; gameplay assemblies must not reference it.
+- **Convention:** the ocean surface is at **world `y = 0`** for *both* the visual mesh and the buoyancy physics. Keep them in sync.
+- **Experience/teaching:** step-by-step, explain the "why" at an experienced-dev level (see `.cursorrules`).
+
+### Files created
+
+- 8 assembly definitions: `Assets/Scripts/{Core,Items,Player,Raft,Building,Resources,UI,Networking}/RaftProto.*.asmdef`
+- `Assets/Scripts/Raft/Buoyancy.cs`
+- `Assets/Scripts/Player/PlayerController.cs`
+- `Assets/Scripts/Core/InputSystem_Actions.cs` — **generated** from the input asset (don't hand-edit)
+- `TutorialInfo` sample removed; `Assets/Scenes/OceanPrototype.unity` is the dev scene
+
+### Scene setup (`OceanPrototype.unity`)
+
+**Ocean** — Plane, Position `(0,0,0)`, Scale `(50,1,50)`, material `M_Ocean` (URP/Lit, Surface Type *Transparent*, blue, alpha ~180). **Mesh Collider removed** (force-based buoyancy needs the water *level*, not a collider).
+
+**Raft** — empty root. Start `Y ≈ 0.1` for play (higher only to test the splash). Components:
+- `Rigidbody`: Mass `40`, Use Gravity on, Linear Damping `0`, Angular Damping `0.05`
+- `Buoyancy.cs`: Water Level `0`, Buoyancy Strength `1.6`, Max Submergence Depth `0.8`, Buoyancy Damping `3`, Override Center Of Mass ✔, Center Of Mass `(0, -0.9, 0)`, Float Points = the 4 `FloatPoint` children
+- Children `Deck_0..3`: Cubes, Scale `(1, 0.25, 1)`, local positions `(±0.5, 0, ±0.5)` — each keeps its `BoxCollider` (compound collider)
+- Children `FloatPoint_0..3`: empties, local positions `(±0.5, -0.6, ±0.5)`
+
+**Player** — Capsule renamed `Player`, **Capsule Collider removed**, `CharacterController` (defaults: Height 2, Radius 0.5, Center 0), `PlayerController.cs`, Position `(0, 1.3, 0)`, Camera Transform left empty (auto-binds `Main Camera`).
+
+**Input** — `InputSystem_Actions` asset has **Generate C# Class** enabled, output `Assets/Scripts/Core/InputSystem_Actions.cs`, class `InputSystem_Actions`, namespace blank.
+
+### Tuning reference (buoyancy)
+
+- Rest depth of float points ≈ `maxSubmergenceDepth / buoyancyStrength`.
+- **Freeboard (deck height above water)** = `(deckTopLocalY − floatPointLocalY) − restDepth`.
+- `buoyancyStrength` = ride height + rebound; `buoyancyDamping` = bob/dip (≈3 is a smooth settle); `centerOfMass` Y below float points = roll stability.
+
+### Gotchas already hit (so you don't re-debug)
+
+- Changing a script's **default field value does NOT change values already serialized** on a component in the scene — set them in the Inspector.
+- The **Plane primitive ships with a Mesh Collider** — the raft was landing on it instead of dipping.
+- Ocean was accidentally at `y = 1` while buoyancy used `0` — they must match.
+- A flat raft floats with a **weakly stable / unstable roll equilibrium**; fix is a **low center of mass** (ballast), not more damping.
+- Generated input class must live **inside an asmdef** (`Scripts/Core`), not `Assets/` root, or our assemblies can't reference it.
+
+---
+
 ## What We're Building Toward
 
 A raft-like game has four core pillars:
@@ -411,17 +462,17 @@ Everything including survival, threats, save, islands — all server-authoritati
 Use this to track progress:
 
 ### Phase 0
-- [ ] Create folder structure under `Assets/` (incl. `Scripts/Networking/`)
-- [ ] Duplicate scene → `OceanPrototype.unity`
-- [ ] (Optional) Remove TutorialInfo assets
-- [ ] Choose networking stack (recommended: Netcode for GameObjects, host/client)
-- [ ] Decide authority model (server-authoritative) and inventory ownership (per-player + shared storage)
+- [x] Create folder structure under `Assets/` (incl. `Scripts/Networking/`) — with per-system asmdefs
+- [x] Duplicate scene → `OceanPrototype.unity`
+- [x] Remove TutorialInfo assets
+- [x] Choose networking stack (Netcode for GameObjects, host/client)
+- [x] Decide authority model (server-authoritative) and inventory ownership (per-player + shared storage)
 
 ### Phase 1
-- [ ] Ocean plane + material
-- [ ] 2×2 starter raft with Rigidbody + colliders
-- [ ] Buoyancy script
-- [ ] Player controller wired to Input System
+- [x] Ocean plane + material
+- [x] 2×2 starter raft with Rigidbody + colliders
+- [x] Buoyancy script (spring-damper, multi-point, low CoM for stability)
+- [~] Player controller wired to Input System (built; pending playtest)
 - [ ] Follow camera
 - [ ] **Milestone:** Walk on bobbing raft in ocean
 
