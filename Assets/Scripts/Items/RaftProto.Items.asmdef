@@ -1,0 +1,16 @@
+{
+    "name": "RaftProto.Items",
+    "rootNamespace": "RaftProto.Items",
+    "references": [
+        "RaftProto.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

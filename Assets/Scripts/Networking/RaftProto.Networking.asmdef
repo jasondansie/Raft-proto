@@ -1,0 +1,22 @@
+{
+    "name": "RaftProto.Networking",
+    "rootNamespace": "RaftProto.Networking",
+    "references": [
+        "RaftProto.Core",
+        "RaftProto.Items",
+        "RaftProto.Player",
+        "RaftProto.Raft",
+        "RaftProto.Building",
+        "RaftProto.Resources",
+        "RaftProto.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
