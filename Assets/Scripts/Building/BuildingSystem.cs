@@ -23,9 +23,14 @@ namespace RaftProto.Building
         [SerializeField] private Vector3 deckLocalScale = new Vector3(1f, 0.25f, 1f);
 
         [Header("Placement")]
-        [SerializeField] private float maxRayDistance = 5f;
+        [Tooltip("Max distance along the aim ray to the deck plane. Caps how far you can point.")]
+        [SerializeField] private float maxRayDistance = 8f;
+        [Tooltip("Max horizontal distance from the player to the target cell centre.")]
         [SerializeField] private float maxPlacementDistanceFromPlayer = 3.5f;
-        [SerializeField] private LayerMask placementMask = Physics.DefaultRaycastLayers;
+
+        [Header("Removal (testing)")]
+        [Tooltip("Test-only key to remove the targeted tile. Later this will be gated behind an axe tool.")]
+        [SerializeField] private Key removeKey = Key.X;
 
         [Header("Ghost Colors")]
         [SerializeField] private Color validGhostColor = new Color(0.2f, 0.9f, 0.3f, 0.45f);
@@ -37,6 +42,7 @@ namespace RaftProto.Building
         private MaterialPropertyBlock _ghostPropertyBlock;
         private Vector2Int _previewCell;
         private bool _hasPreview;
+        private bool _hasTargetCell;
 
         private void Awake()
         {
@@ -91,81 +97,68 @@ namespace RaftProto.Building
             {
                 TryPlacePreviewedTile();
             }
+
+            if (Keyboard.current != null && Keyboard.current[removeKey].wasPressedThisFrame)
+            {
+                TryRemoveTargetedTile();
+            }
         }
 
         private void UpdatePreview()
         {
-            Ray ray = cameraTransform.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
 
             if (!TryGetTargetCell(ray, out Vector2Int targetCell))
             {
+                _hasTargetCell = false;
                 SetGhostVisible(false);
                 return;
             }
 
-            bool isValid = IsValidPlacement(targetCell);
             _previewCell = targetCell;
+            _hasTargetCell = true;
+
+            bool isValid = IsValidPlacement(targetCell);
             _hasPreview = isValid;
 
             _ghostRoot.SetParent(raftGrid.transform, false);
             _ghostRoot.localPosition = raftGrid.CellToLocal(targetCell);
             _ghostRoot.localRotation = Quaternion.identity;
-            _ghostRoot.localScale = deckLocalScale;
 
             SetGhostColor(isValid ? validGhostColor : invalidGhostColor);
             SetGhostVisible(true);
         }
 
-        private bool TryGetTargetCell(Ray ray, out Vector2Int targetCell)
+    private bool TryGetTargetCell(Ray ray, out Vector2Int targetCell)
+    {
+        targetCell = default;
+
+        // Project the aim ray onto the raft's deck plane. Using the grid's own up/origin
+        // keeps this correct while the raft bobs and tilts, and lets us aim at empty water
+        // cells next to the raft instead of needing the crosshair on an existing tile.
+        Plane deckPlane = new Plane(raftGrid.transform.up, raftGrid.transform.position);
+
+        if (!deckPlane.Raycast(ray, out float enter) || enter > maxRayDistance)
         {
-            targetCell = default;
-
-            if (!Physics.Raycast(ray, out RaycastHit hit, maxRayDistance, placementMask, QueryTriggerInteraction.Ignore))
-            {
-                return false;
-            }
-
-            if (!IsRaftCollider(hit.collider))
-            {
-                return false;
-            }
-
-            Vector2Int hitCell = raftGrid.WorldToCell(hit.point);
-            Vector2Int offset = GetPlacementOffset(hit);
-            targetCell = hitCell + offset;
-            return true;
+            return false;
         }
 
-        private Vector2Int GetPlacementOffset(RaycastHit hit)
-        {
-            if (Mathf.Abs(hit.normal.y) < 0.5f)
-            {
-                return new Vector2Int(
-                    Mathf.RoundToInt(hit.normal.x),
-                    Mathf.RoundToInt(hit.normal.z));
-            }
-
-            Vector3 forward = cameraTransform.forward;
-            forward.y = 0f;
-            if (forward.sqrMagnitude < 0.0001f)
-            {
-                return Vector2Int.zero;
-            }
-
-            forward.Normalize();
-            return new Vector2Int(Mathf.RoundToInt(forward.x), Mathf.RoundToInt(forward.z));
-        }
+        targetCell = raftGrid.WorldToCell(ray.GetPoint(enter));
+        return true;
+    }
 
         private bool IsValidPlacement(Vector2Int cell)
         {
-            if (!raftGrid.CanPlaceTile(cell))
-            {
-                return false;
-            }
+            return raftGrid.CanPlaceTile(cell) && IsWithinReach(cell);
+        }
 
-            Vector3 cellWorld = raftGrid.CellToWorld(cell);
-            float distance = Vector3.Distance(playerTransform.position, cellWorld);
-            return distance <= maxPlacementDistanceFromPlayer;
+        // Horizontal reach only: the player capsule sits ~1m above the deck, so including
+        // the vertical gap would shrink the usable reach and make edge tiles feel unreachable.
+        private bool IsWithinReach(Vector2Int cell)
+        {
+            Vector3 toCell = raftGrid.CellToWorld(cell) - playerTransform.position;
+            toCell.y = 0f;
+            return toCell.magnitude <= maxPlacementDistanceFromPlayer;
         }
 
         private void TryPlacePreviewedTile()
@@ -187,6 +180,30 @@ namespace RaftProto.Building
             }
         }
 
+        private void TryRemoveTargetedTile()
+        {
+            if (!_hasTargetCell || !raftGrid.HasTile(_previewCell))
+            {
+                return;
+            }
+
+            if (!IsWithinReach(_previewCell))
+            {
+                return;
+            }
+
+            // Keep at least one tile so the raft doesn't lose all buoyancy and sink.
+            if (raftGrid.Tiles.Count <= 1)
+            {
+                return;
+            }
+
+            if (raftGrid.RemoveTile(_previewCell, out Transform removedRoot) && removedRoot != null)
+            {
+                Destroy(removedRoot.gameObject);
+            }
+        }
+
         private GameObject CreateDeckTile(Vector2Int cell)
         {
             GameObject tileObject;
@@ -200,20 +217,15 @@ namespace RaftProto.Building
                 tileObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 tileObject.transform.SetParent(raftGrid.transform, false);
                 tileObject.name = $"Deck_{cell.x}_{cell.y}";
+                tileObject.transform.localScale = deckLocalScale;
             }
 
             tileObject.transform.localPosition = raftGrid.CellToLocal(cell);
             tileObject.transform.localRotation = Quaternion.identity;
-            tileObject.transform.localScale = deckLocalScale;
             return tileObject;
         }
 
-        private bool IsRaftCollider(Collider collider)
-        {
-            return collider.transform.IsChildOf(raftGrid.transform);
-        }
-
-        private void CreateGhost()
+    private void CreateGhost()
         {
             if (deckTilePrefab != null)
             {
@@ -224,6 +236,7 @@ namespace RaftProto.Building
             {
                 _ghostRoot = GameObject.CreatePrimitive(PrimitiveType.Cube).transform;
                 _ghostRoot.name = "DeckGhost";
+                _ghostRoot.localScale = deckLocalScale;
             }
 
             foreach (Collider collider in _ghostRoot.GetComponentsInChildren<Collider>())

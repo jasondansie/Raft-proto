@@ -22,7 +22,17 @@ This is a good starting point: infrastructure is ready, and every system will be
 
 > Snapshot of what's actually built so you can continue on another machine. **Commit & push everything (including `Assets/Scripts/**` and `Assets/Materials/M_Ocean.mat`) before switching.** Unity will rebuild `Library/` on the new machine; empty asset folders (`Prefabs`, `Data`, `Art`) won't be in git until they contain assets — that's fine.
 
-**Currently mid Phase 1.3 (player controller).** Next action: test player walking, then do **Phase 1.4 (follow camera)**.
+**Phases 1 & 2 complete.** Next action: start **Phase 3 (survival/resources)** — floating debris, basic inventory, gather hook.
+
+**Done since last snapshot:**
+- **Phase 1.4 camera:** `FollowCamera.cs` in place.
+- **Phase 2.1 grid:** `RaftGrid.cs` — integer XZ grid, coord conversions, occupancy, `CanPlaceTile` (empty + adjacent), `RegisterTile`/`RemoveTile`, and a `TilesChanged` event.
+- **Phase 2.2 building:** `BuildingSystem.cs` — aims by **projecting the camera ray onto the raft's deck plane** (works while the raft tilts/bobs and lets you point at empty water next to the raft). Ghost preview + horizontal-only reach gate. Place on **Interact**; **test-only removal on key `X`** (`removeKey`, later gated behind an axe). Won't remove the last remaining tile.
+- **Phase 2.3 raft growth (physics):** `Buoyancy.cs` is now **grid-driven** — one float sample per occupied cell, `mass = tileCount × massPerTile`, and center of mass recomputed to the deck centroid + ballast each `TilesChanged`. Ride height is constant for any size/shape because force budget and mass both scale with tile count. Old fixed `FloatPoint` children are no longer used.
+
+**Building/grid scene values:** `RaftGrid.tileSize = 2` (matches the 2 m `DeckTile`); tiles use `Assets/Prefabs/DeckTile.prefab` (Variant of kit `WoodFloor1`, Rigidbody removed); `Buoyancy` auto-finds `RaftGrid` on the same object; `Mass Per Tile 10`, `Float Sample Local Y -0.6`, `Ballast Local Y -0.9`.
+
+**Known gaps / TODO:** removal currently lets you split the raft into disconnected islands (no connectivity check yet); building/removal are local-only (server-authoritative conversion deferred to Phase 6).
 
 ### Decisions locked in
 
@@ -472,15 +482,17 @@ Use this to track progress:
 - [x] Ocean plane + material
 - [x] 2×2 starter raft with Rigidbody + colliders
 - [x] Buoyancy script (spring-damper, multi-point, low CoM for stability)
-- [~] Player controller wired to Input System (built; pending playtest)
-- [ ] Follow camera
-- [ ] **Milestone:** Walk on bobbing raft in ocean
+- [x] Player controller wired to Input System
+- [x] Follow camera
+- [x] **Milestone:** Walk on bobbing raft in ocean
 
 ### Phase 2
-- [ ] Raft grid data structure
-- [ ] Building raycast + ghost preview
-- [ ] Tile placement on Interact
-- [ ] **Milestone:** Expand raft by placing tiles
+- [x] Raft grid data structure
+- [x] Building raycast + ghost preview (deck-plane projection)
+- [x] Tile placement on Interact
+- [x] Tile removal (test key `X`; axe-gated later)
+- [x] Buoyancy scales with raft growth (per-cell samples, mass + CoM)
+- [x] **Milestone:** Expand raft by placing tiles
 
 ### Phase 3
 - [ ] Resource spawner

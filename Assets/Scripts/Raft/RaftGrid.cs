@@ -26,6 +26,9 @@ namespace RaftProto.Raft
         public float TileSize => tileSize;
         public IReadOnlyDictionary<Vector2Int, RaftTile> Tiles => _tiles;
 
+        /// <summary>Raised after the set of occupied cells changes (tile added/removed).</summary>
+        public event System.Action TilesChanged;
+
         private void Awake()
         {
             RegisterInitialTiles();
@@ -79,6 +82,26 @@ namespace RaftProto.Raft
             }
 
             _tiles[cell] = new RaftTile(cell, tileRoot);
+            TilesChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// Removes the tile at <paramref name="cell"/> from the model and returns its root so the
+        /// caller can destroy it. The grid owns the data, not the GameObject lifetime.
+        /// </summary>
+        public bool RemoveTile(Vector2Int cell, out Transform removedRoot)
+        {
+            removedRoot = null;
+
+            if (!_tiles.TryGetValue(cell, out RaftTile tile))
+            {
+                return false;
+            }
+
+            removedRoot = tile.Root;
+            _tiles.Remove(cell);
+            TilesChanged?.Invoke();
             return true;
         }
 

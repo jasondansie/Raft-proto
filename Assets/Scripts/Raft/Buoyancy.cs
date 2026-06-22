@@ -1,11 +1,16 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace RaftProto.Raft
 {
     /// <summary>
-    /// Applies a spring-damper buoyancy force at several sample points so the body
-    /// floats at the water line and self-levels. Pure local physics: in multiplayer
-    /// this component is expected to run on the server only and be disabled on clients.
+    /// Grid-driven spring-damper buoyancy. One float sample is generated per occupied
+    /// <see cref="RaftGrid"/> cell, and the rigidbody mass + center of mass scale with the
+    /// raft as it grows, so any size or shape floats level at the same ride height. Because
+    /// both the per-point force budget and the mass scale with tile count, the tuned
+    /// equilibrium depth is independent of how big the raft gets.
+    ///
+    /// Pure local physics: in multiplayer this runs on the server only and is disabled on clients.
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
     public class Buoyancy : MonoBehaviour
@@ -14,9 +19,9 @@ namespace RaftProto.Raft
         [Tooltip("World-space height of the ocean surface. Convention for the whole project is 0.")]
         [SerializeField] private float waterLevel = 0f;
 
-        [Header("Float Sampling")]
-        [Tooltip("Points sampled for submersion. Spread them to the corners for self-leveling torque.")]
-        [SerializeField] private Transform[] floatPoints;
+        [Header("Grid Source")]
+        [Tooltip("Float samples, mass and center of mass are derived from this grid's occupied cells. Auto-found on this object if left empty.")]
+        [SerializeField] private RaftGrid raftGrid;
 
         [Header("Tuning")]
         [Tooltip("Buoyancy as a multiple of weight at full submersion. >1 means it floats up.")]
@@ -28,57 +33,112 @@ namespace RaftProto.Raft
         [Tooltip("Opposes vertical velocity at each point for a smooth settle. Higher = less bob/dip.")]
         [SerializeField] private float buoyancyDamping = 3f;
 
-        [Header("Stability")]
-        [Tooltip("Override the rigidbody center of mass. Placing it below the float points makes the raft self-right (ballast effect).")]
-        [SerializeField] private bool overrideCenterOfMass = true;
+        [Header("Per-Tile Physics")]
+        [Tooltip("Mass (kg) added to the rigidbody for each placed tile.")]
+        [SerializeField] private float massPerTile = 10f;
 
-        [Tooltip("Local-space center of mass. Keep its Y below the float points for roll stability.")]
-        [SerializeField] private Vector3 centerOfMass = new Vector3(0f, -0.9f, 0f);
+        [Tooltip("Local Y of each float sample below the deck plane. Lower = more freeboard.")]
+        [SerializeField] private float floatSampleLocalY = -0.6f;
+
+        [Tooltip("Local Y of the center of mass below the deck. Keep below the samples for roll stability.")]
+        [SerializeField] private float ballastLocalY = -0.9f;
 
         private Rigidbody _body;
+        private readonly List<Vector3> _localSamples = new();
 
         private void Awake()
         {
             _body = GetComponent<Rigidbody>();
 
-            if (overrideCenterOfMass)
+            if (raftGrid == null)
             {
-                _body.centerOfMass = centerOfMass;
+                raftGrid = GetComponent<RaftGrid>();
             }
+        }
+
+        private void OnEnable()
+        {
+            if (raftGrid != null)
+            {
+                raftGrid.TilesChanged += Rebuild;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (raftGrid != null)
+            {
+                raftGrid.TilesChanged -= Rebuild;
+            }
+        }
+
+        private void Start()
+        {
+            // Initial tiles are registered in RaftGrid.Awake, so build once after all Awakes.
+            Rebuild();
+        }
+
+        /// <summary>
+        /// Recompute float samples, mass and center of mass from the current occupied cells.
+        /// Cheap and only called when the tile set changes.
+        /// </summary>
+        private void Rebuild()
+        {
+            _localSamples.Clear();
+
+            if (raftGrid == null)
+            {
+                return;
+            }
+
+            Vector3 centroid = Vector3.zero;
+            foreach (Vector2Int cell in raftGrid.Tiles.Keys)
+            {
+                Vector3 deckLocal = raftGrid.CellToLocal(cell);
+                centroid += deckLocal;
+                _localSamples.Add(new Vector3(deckLocal.x, floatSampleLocalY, deckLocal.z));
+            }
+
+            int count = _localSamples.Count;
+            if (count == 0)
+            {
+                return;
+            }
+
+            centroid /= count;
+            _body.mass = count * massPerTile;
+            _body.centerOfMass = new Vector3(centroid.x, ballastLocalY, centroid.z);
         }
 
         private void FixedUpdate()
         {
-            if (floatPoints == null || floatPoints.Length == 0)
+            int count = _localSamples.Count;
+            if (count == 0)
             {
                 return;
             }
 
             float gravity = Mathf.Abs(Physics.gravity.y);
-            int pointCount = floatPoints.Length;
-            float maxForcePerPoint = _body.mass * gravity * buoyancyStrength / pointCount;
-            float dampingPerPoint = _body.mass * buoyancyDamping / pointCount;
+            float maxForcePerPoint = _body.mass * gravity * buoyancyStrength / count;
+            float dampingPerPoint = _body.mass * buoyancyDamping / count;
 
-            foreach (Transform point in floatPoints)
+            for (int i = 0; i < count; i++)
             {
-                if (point == null)
-                {
-                    continue;
-                }
+                Vector3 worldPoint = transform.TransformPoint(_localSamples[i]);
 
-                float depth = waterLevel - point.position.y;
+                float depth = waterLevel - worldPoint.y;
                 if (depth <= 0f)
                 {
                     continue;
                 }
 
                 float submersion = Mathf.Clamp01(depth / maxSubmergenceDepth);
-                float verticalSpeed = _body.GetPointVelocity(point.position).y;
+                float verticalSpeed = _body.GetPointVelocity(worldPoint).y;
 
                 float springForce = maxForcePerPoint * submersion;
                 float dampingForce = verticalSpeed * dampingPerPoint * submersion;
 
-                _body.AddForceAtPosition(Vector3.up * (springForce - dampingForce), point.position, ForceMode.Force);
+                _body.AddForceAtPosition(Vector3.up * (springForce - dampingForce), worldPoint, ForceMode.Force);
             }
         }
     }
