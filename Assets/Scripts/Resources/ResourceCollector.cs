@@ -1,35 +1,125 @@
+using RaftProto.Core;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace RaftProto.Resources
 {
+    public enum ResourcePickupMode
+    {
+        Interact,
+        Proximity,
+        Both
+    }
+
     /// <summary>
-    /// Proximity pickup attached to the player. In multiplayer this becomes a CollectServerRpc:
-    /// the owning client asks, the server validates range + availability, despawns once, and
-    /// credits the owner's inventory. For now it runs locally and auto-collects in range.
+    /// Collects floating resources via Interact (default), optional proximity, or both.
+    /// Blocked while <see cref="IBlocksResourcePickup"/> is active (build mode). In multiplayer
+    /// this becomes a server-validated CollectServerRpc.
     ///
-    /// The <see cref="Collected"/> event is the seam Phase 4 inventory will subscribe to.
+    /// Prefabs are assigned on <see cref="ResourceSpawner"/> spawn entries, not here.
     /// </summary>
     public class ResourceCollector : MonoBehaviour
     {
-        [Tooltip("Pickup radius around the player. Allow for the ~1.3m gap between the capsule center and the water surface.")]
+        [SerializeField] private ResourcePickupMode pickupMode = ResourcePickupMode.Interact;
+
+        [Tooltip("Pickup radius around the player.")]
         [SerializeField] private float collectRange = 2.5f;
 
-        [Tooltip("Max colliders considered per frame (non-alloc buffer size).")]
+        [Tooltip("Max colliders considered per query (non-alloc buffer size).")]
         [SerializeField] private int maxConsidered = 16;
+
+        [Header("Interact Aim")]
+        [Tooltip("Prefer resources closer to the camera forward axis when pressing Interact.")]
+        [SerializeField] private Transform cameraTransform;
 
         public event System.Action<ResourceType> Collected;
 
+        private InputSystem_Actions _input;
         private Collider[] _buffer;
+        private IBlocksResourcePickup _pickupBlocker;
 
         private void Awake()
         {
+            _input = new InputSystem_Actions();
             _buffer = new Collider[Mathf.Max(1, maxConsidered)];
+            _pickupBlocker = GetComponent<IBlocksResourcePickup>();
+
+            if (cameraTransform == null && Camera.main != null)
+            {
+                cameraTransform = Camera.main.transform;
+            }
+        }
+
+        private void OnEnable()
+        {
+            _input.Player.Enable();
+        }
+
+        private void OnDisable()
+        {
+            _input.Player.Disable();
+        }
+
+        private void OnDestroy()
+        {
+            _input.Dispose();
         }
 
         private void Update()
         {
+            if (IsPickupBlocked())
+            {
+                return;
+            }
+
+            if (pickupMode == ResourcePickupMode.Interact || pickupMode == ResourcePickupMode.Both)
+            {
+                if (_input.Player.Interact.WasPressedThisFrame())
+                {
+                    TryCollectBestInRange(preferAim: true);
+                }
+            }
+
+            if (pickupMode == ResourcePickupMode.Proximity || pickupMode == ResourcePickupMode.Both)
+            {
+                TryCollectBestInRange(preferAim: false);
+            }
+        }
+
+        /// <summary>Used by <see cref="ResourceHook"/> when a reeled resource reaches the player.</summary>
+        public bool TryCollect(FloatingResource resource)
+        {
+            if (resource == null || IsPickupBlocked())
+            {
+                return false;
+            }
+
+            ResourceType type = resource.ResourceType;
+            if (resource.TryConsume())
+            {
+                Collected?.Invoke(type);
+                return true;
+            }
+
+            return false;
+        }
+
+        private void TryCollectBestInRange(bool preferAim)
+        {
+            FloatingResource best = FindBestResource(preferAim);
+            if (best != null)
+            {
+                TryCollect(best);
+            }
+        }
+
+        private FloatingResource FindBestResource(bool preferAim)
+        {
             int count = Physics.OverlapSphereNonAlloc(
                 transform.position, collectRange, _buffer, ~0, QueryTriggerInteraction.Collide);
+
+            FloatingResource best = null;
+            float bestScore = float.MaxValue;
 
             for (int i = 0; i < count; i++)
             {
@@ -40,17 +130,39 @@ namespace RaftProto.Resources
                 }
 
                 FloatingResource resource = col.GetComponentInParent<FloatingResource>();
-                if (resource == null)
+                if (resource == null || !resource.IsAvailable)
                 {
                     continue;
                 }
 
-                ResourceType type = resource.ResourceType;
-                if (resource.TryConsume())
+                Vector3 toResource = resource.transform.position - transform.position;
+                float distance = toResource.magnitude;
+
+                float score = distance;
+                if (preferAim && cameraTransform != null)
                 {
-                    Collected?.Invoke(type);
+                    Vector3 flatToResource = toResource;
+                    flatToResource.y = 0f;
+                    if (flatToResource.sqrMagnitude > 0.0001f)
+                    {
+                        float angle = Vector3.Angle(cameraTransform.forward, flatToResource.normalized);
+                        score += angle * 0.05f;
+                    }
+                }
+
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    best = resource;
                 }
             }
+
+            return best;
+        }
+
+        private bool IsPickupBlocked()
+        {
+            return _pickupBlocker != null && _pickupBlocker.BlocksResourcePickup;
         }
     }
 }

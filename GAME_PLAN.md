@@ -22,7 +22,7 @@ This is a good starting point: infrastructure is ready, and every system will be
 
 > Snapshot of what's actually built so you can continue on another machine. **Commit & push everything (including `Assets/Scripts/**` and `Assets/Materials/M_Ocean.mat`) before switching.** Unity will rebuild `Library/` on the new machine; empty asset folders (`Prefabs`, `Data`, `Art`) won't be in git until they contain assets — that's fine.
 
-**Phases 1 & 2 complete. Phase 3 implemented (pending playtest).** Next action: playtest spawning/pickup, then start **Phase 4 (inventory & crafting)** — the `ResourceCollector.Collected` event is the seam to hook inventory onto.
+**Phases 1–3 complete.** Next action: start **Phase 4 (inventory & crafting)** — hook `ResourceCollector.Collected` into a real inventory.
 
 **Done since last snapshot:**
 - **Phase 1.4 camera:** `FollowCamera.cs` in place.
@@ -497,8 +497,11 @@ Use this to track progress:
 ### Phase 3
 - [x] Resource spawner (`ResourceSpawner` — ring spawn upstream, current drift, cap + despawn)
 - [x] Drifting resource movement (`FloatingResource` — current drift + bob, single-winner `TryConsume`)
-- [x] Collection MVP (`ResourceCollector` — proximity auto-pickup, `Collected` event seam)
-- [ ] **Milestone:** Gather floating resources *(pending playtest)*
+- [x] Object pooling (`ResourcePool` — per-visual prefab stack, prewarm)
+- [x] Kit resource prefabs (`ResourceSpawnEntry` — assign kit visuals; components added at runtime)
+- [x] Collection via Interact (`ResourceCollector` — aim-weighted pickup; blocked in build mode)
+- [x] Hook on Attack (`ResourceHook` — raycast attach, reel, line visual)
+- [x] **Milestone:** Gather floating resources
 
 ### Phase 4
 - [ ] ItemDefinition + RecipeDefinition ScriptableObjects

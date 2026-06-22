@@ -3,7 +3,8 @@
     "rootNamespace": "RaftProto.Resources",
     "references": [
         "RaftProto.Core",
-        "RaftProto.Items"
+        "RaftProto.Items",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -184,13 +184,16 @@ namespace RaftProto.Player
 
         private void InitializeAnglesFromTransform()
         {
-            Vector3 euler = transform.rotation.eulerAngles;
-            _yaw = euler.y;
-            _pitch = euler.x;
-            if (_pitch > 180f)
+            if (target != null)
             {
-                _pitch -= 360f;
+                _yaw = target.eulerAngles.y;
             }
+            else
+            {
+                _yaw = transform.eulerAngles.y;
+            }
+
+            _pitch = 0f;
         }
 
         private void SnapToMode()

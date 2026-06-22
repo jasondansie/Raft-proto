@@ -1,3 +1,4 @@
+using RaftProto.Core;
 using RaftProto.Raft;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,8 +9,9 @@ namespace RaftProto.Building
     /// Local building preview and placement. Requires build mode (B key for now; later a
     /// hammer tool) before showing the ghost or accepting place/remove input.
     /// </summary>
-    public class BuildingSystem : MonoBehaviour
+    public class BuildingSystem : MonoBehaviour, IBlocksResourcePickup
     {
+        bool IBlocksResourcePickup.BlocksResourcePickup => _buildModeActive;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         [Header("References")]
@@ -47,6 +49,7 @@ namespace RaftProto.Building
         private bool _hasPreview;
         private bool _hasTargetCell;
         private bool _buildModeActive;
+        private ISwimStateProvider _swimState;
 
         /// <summary>True while the player is in build mode (hammer equipped). Later driven by the tool system.</summary>
         public bool IsBuildModeActive => _buildModeActive;
@@ -55,6 +58,7 @@ namespace RaftProto.Building
         {
             _input = new InputSystem_Actions();
             _ghostPropertyBlock = new MaterialPropertyBlock();
+            _swimState = GetComponent<ISwimStateProvider>();
 
             if (cameraTransform == null && Camera.main != null)
             {
@@ -101,7 +105,15 @@ namespace RaftProto.Building
 
             if (Keyboard.current != null && Keyboard.current[buildModeKey].wasPressedThisFrame)
             {
-                SetBuildModeActive(!_buildModeActive);
+                if (_swimState == null || !_swimState.IsSwimming)
+                {
+                    SetBuildModeActive(!_buildModeActive);
+                }
+            }
+
+            if (_swimState != null && _swimState.IsSwimming && _buildModeActive)
+            {
+                SetBuildModeActive(false);
             }
 
             if (!_buildModeActive)

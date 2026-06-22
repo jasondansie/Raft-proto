@@ -1,3 +1,4 @@
+using RaftProto.Core;
 using UnityEngine;
 
 namespace RaftProto.Player
@@ -9,7 +10,8 @@ namespace RaftProto.Player
     /// the owning client; the server still owns authoritative position via the networked controller.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
-    public class PlayerSwimming : MonoBehaviour
+    [DefaultExecutionOrder(-100)]
+    public class PlayerSwimming : MonoBehaviour, ISwimStateProvider
     {
         [Header("Water")]
         [Tooltip("World-space height of the ocean surface. Project convention is 0.")]
@@ -36,6 +38,11 @@ namespace RaftProto.Player
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
+        }
+
+        private void Update()
+        {
+            UpdateSwimState();
         }
 
         /// <summary>Call once per frame before applying vertical velocity.</summary>

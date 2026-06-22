@@ -1,8 +1,10 @@
 ﻿<Solution>
+  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="RaftProto.Resources.csproj" />
   <Project Path="RaftProto.UI.csproj" />
-  <Project Path="RaftProto.Player.csproj" />
-  <Project Path="RaftProto.Raft.csproj" />
   <Project Path="RaftProto.Core.csproj" />
+  <Project Path="RaftProto.Player.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="RaftProto.Raft.csproj" />
   <Project Path="RaftProto.Building.csproj" />
 </Solution>

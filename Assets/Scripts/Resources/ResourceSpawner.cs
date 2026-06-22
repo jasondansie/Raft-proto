@@ -5,8 +5,7 @@ namespace RaftProto.Resources
 {
     /// <summary>
     /// Spawns drifting resources upstream of a target and sends them across on a shared current.
-    /// In multiplayer this is server-only and the spawned objects are networked; running it on
-    /// every client would create duplicate/ghost resources. Local for now.
+    /// Uses a simple object pool per visual prefab. In multiplayer this is server-only.
     /// </summary>
     public class ResourceSpawner : MonoBehaviour
     {
@@ -15,33 +14,71 @@ namespace RaftProto.Resources
         [SerializeField] private Transform target;
 
         [Header("Prefabs")]
-        [Tooltip("Optional resource prefabs (each needs a FloatingResource + collider). If empty, a primitive cube is used.")]
-        [SerializeField] private FloatingResource[] resourcePrefabs;
+        [Tooltip("Kit prefabs mapped to resource types. If empty, a fallback cube is used.")]
+        [SerializeField] private ResourceSpawnEntry[] spawnEntries;
 
         [Header("Spawning")]
         [SerializeField] private float spawnInterval = 2f;
         [SerializeField] private int maxAlive = 20;
+        [SerializeField] private int prewarmPerType = 4;
         [Tooltip("Distance from target where resources appear (upstream of the current).")]
         [SerializeField] private float spawnRadius = 30f;
-        [Tooltip("Distance from target beyond which resources despawn.")]
+        [Tooltip("Distance from target beyond which resources are returned to the pool.")]
         [SerializeField] private float despawnRadius = 45f;
 
         [Header("Current")]
-        [Tooltip("World-space direction the resources drift along.")]
-        [SerializeField] private Vector3 currentDirection = new Vector3(-1f, 0f, -0.3f);
+        [Tooltip("When enabled, debris spawns on the target's forward horizon and drifts toward the raft.")]
+        [SerializeField] private bool deriveCurrentFromTargetForward = true;
+        [Tooltip("Manual drift direction (world XZ) when not deriving from the target.")]
+        [SerializeField] private Vector3 currentDirection = new Vector3(0f, 0f, -1f);
         [SerializeField] private float driftSpeed = 1.5f;
 
         [Header("Float")]
         [SerializeField] private float waterLevel = 0f;
 
         private readonly List<FloatingResource> _alive = new();
+        private ResourcePool _pool;
         private float _timer;
+        private float _totalSpawnWeight;
 
         private void Awake()
         {
             if (target == null)
             {
                 target = transform;
+            }
+
+            _pool = new ResourcePool(transform, prewarmPerType);
+            RecalculateSpawnWeights();
+
+            if (spawnEntries == null || spawnEntries.Length == 0 || _totalSpawnWeight <= 0f)
+            {
+                Debug.LogWarning(
+                    $"{nameof(ResourceSpawner)} on '{name}' has no Spawn Entries — using grey cube fallbacks. " +
+                    "Assign kit prefabs on the ResourceSpawner component (not ResourceCollector).",
+                    this);
+            }
+        }
+
+        private void OnValidate()
+        {
+            RecalculateSpawnWeights();
+        }
+
+        private void RecalculateSpawnWeights()
+        {
+            _totalSpawnWeight = 0f;
+            if (spawnEntries == null)
+            {
+                return;
+            }
+
+            foreach (ResourceSpawnEntry entry in spawnEntries)
+            {
+                if (entry.visualPrefab != null && entry.spawnWeight > 0f)
+                {
+                    _totalSpawnWeight += entry.spawnWeight;
+                }
             }
         }
 
@@ -59,57 +96,70 @@ namespace RaftProto.Resources
 
         private void TrySpawn()
         {
-            _alive.RemoveAll(r => r == null);
+            _alive.RemoveAll(r => r == null || !r.IsAvailable);
             if (_alive.Count >= maxAlive)
             {
                 return;
             }
 
-            Vector3 drift = currentDirection.sqrMagnitude > 0.0001f
-                ? currentDirection.normalized * driftSpeed
-                : Vector3.zero;
+            if (!TryPickSpawnEntry(out ResourceSpawnEntry entry))
+            {
+                return;
+            }
+
+            Vector3 drift = GetDriftVelocity();
 
             Vector3 flow = drift.sqrMagnitude > 0.0001f ? drift.normalized : Vector3.forward;
             Vector3 lateral = Vector3.Cross(Vector3.up, flow);
 
-            // Start upstream and offset sideways so it drifts across the target area.
             Vector3 spawnPos = target.position
                 - flow * spawnRadius
                 + lateral * Random.Range(-spawnRadius, spawnRadius);
             spawnPos.y = waterLevel;
 
-            FloatingResource resource = CreateResource();
+            FloatingResource resource = _pool.Acquire(entry.visualPrefab, entry.resourceType);
             resource.transform.position = spawnPos;
-            resource.Initialize(RandomType(), drift);
+            resource.Initialize(entry.resourceType, drift);
             _alive.Add(resource);
         }
 
-        private FloatingResource CreateResource()
+        private bool TryPickSpawnEntry(out ResourceSpawnEntry picked)
         {
-            if (resourcePrefabs != null && resourcePrefabs.Length > 0)
+            picked = default;
+
+            if (spawnEntries == null || spawnEntries.Length == 0 || _totalSpawnWeight <= 0f)
             {
-                FloatingResource prefab = resourcePrefabs[Random.Range(0, resourcePrefabs.Length)];
-                if (prefab != null)
+                picked = new ResourceSpawnEntry
                 {
-                    return Instantiate(prefab);
+                    visualPrefab = null,
+                    resourceType = RandomFallbackType(),
+                    spawnWeight = 1f
+                };
+                return true;
+            }
+
+            float roll = Random.Range(0f, _totalSpawnWeight);
+            float cumulative = 0f;
+
+            foreach (ResourceSpawnEntry entry in spawnEntries)
+            {
+                if (entry.visualPrefab == null || entry.spawnWeight <= 0f)
+                {
+                    continue;
+                }
+
+                cumulative += entry.spawnWeight;
+                if (roll <= cumulative)
+                {
+                    picked = entry;
+                    return true;
                 }
             }
 
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = "FloatingResource";
-            go.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
-
-            // Trigger so it can be detected by the collector but doesn't shove the player or raft.
-            Collider col = go.GetComponent<Collider>();
-            if (col != null)
-            {
-                col.isTrigger = true;
-            }
-
-            return go.AddComponent<FloatingResource>();
+            return false;
         }
 
-        private static ResourceType RandomType()
+        private static ResourceType RandomFallbackType()
         {
             System.Array values = System.Enum.GetValues(typeof(ResourceType));
             return (ResourceType)values.GetValue(Random.Range(0, values.Length));
@@ -120,7 +170,7 @@ namespace RaftProto.Resources
             for (int i = _alive.Count - 1; i >= 0; i--)
             {
                 FloatingResource resource = _alive[i];
-                if (resource == null)
+                if (resource == null || !resource.gameObject.activeInHierarchy)
                 {
                     _alive.RemoveAt(i);
                     continue;
@@ -130,10 +180,34 @@ namespace RaftProto.Resources
                 flat.y = 0f;
                 if (flat.magnitude > despawnRadius)
                 {
-                    Destroy(resource.gameObject);
+                    resource.Recycle();
                     _alive.RemoveAt(i);
                 }
             }
+        }
+
+        private Vector3 GetDriftVelocity()
+        {
+            Vector3 direction = GetDriftDirection();
+            return direction * driftSpeed;
+        }
+
+        private Vector3 GetDriftDirection()
+        {
+            if (deriveCurrentFromTargetForward && target != null)
+            {
+                // Spawn upstream at target.forward * radius; drift travels toward the raft.
+                Vector3 towardRaft = -target.forward;
+                towardRaft.y = 0f;
+                if (towardRaft.sqrMagnitude > 0.0001f)
+                {
+                    return towardRaft.normalized;
+                }
+            }
+
+            Vector3 manual = currentDirection;
+            manual.y = 0f;
+            return manual.sqrMagnitude > 0.0001f ? manual.normalized : Vector3.back;
         }
     }
 }
