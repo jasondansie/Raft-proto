@@ -4,7 +4,8 @@
     "references": [
         "RaftProto.Core",
         "RaftProto.Items",
-        "RaftProto.Raft"
+        "RaftProto.Raft",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

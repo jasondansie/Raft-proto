@@ -877,6 +877,7 @@ GameObject:
   - component: {fileID: 1511892639}
   - component: {fileID: 1511892638}
   - component: {fileID: 1511892637}
+  - component: {fileID: 1511892640}
   m_Layer: 0
   m_Name: Raft
   m_TagString: Untagged
@@ -958,6 +959,25 @@ Transform:
   - {fileID: 2019439990}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1511892640
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1511892636}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3a12a5279465f94cab32f6dd9fab93d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Raft::RaftProto.Raft.RaftGrid
+  tileSize: 1
+  initialTileRoots:
+  - {fileID: 1155368595}
+  - {fileID: 1933829921}
+  - {fileID: 1183156110}
+  - {fileID: 1897852328}
+  logRegisteredCellsOnAwake: 1
 --- !u!1 &1709426923
 GameObject:
   m_ObjectHideFlags: 0
