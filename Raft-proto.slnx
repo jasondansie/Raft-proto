@@ -1,4 +1,6 @@
 ﻿<Solution>
+  <Project Path="RaftProto.Resources.csproj" />
+  <Project Path="RaftProto.UI.csproj" />
   <Project Path="RaftProto.Player.csproj" />
   <Project Path="RaftProto.Raft.csproj" />
   <Project Path="RaftProto.Core.csproj" />

@@ -12,6 +12,9 @@ namespace RaftProto.Player
     [RequireComponent(typeof(CharacterController))]
     public class PlayerController : MonoBehaviour
     {
+        [Header("Swimming")]
+        [Tooltip("Optional swim behaviour when the player falls into the ocean.")]
+        [SerializeField] private PlayerSwimming swimming;
         [Header("Movement")]
         [SerializeField] private float moveSpeed = 4f;
         [SerializeField] private float sprintSpeed = 7f;
@@ -38,6 +41,11 @@ namespace RaftProto.Player
             _controller = GetComponent<CharacterController>();
             _input = new InputSystem_Actions();
 
+            if (swimming == null)
+            {
+                swimming = GetComponent<PlayerSwimming>();
+            }
+
             if (cameraTransform == null && Camera.main != null)
             {
                 cameraTransform = Camera.main.transform;
@@ -63,7 +71,7 @@ namespace RaftProto.Player
 
         private void OnJump(InputAction.CallbackContext context)
         {
-            if (_controller.isGrounded)
+            if (_controller.isGrounded || (swimming != null && swimming.IsSwimming))
             {
                 _jumpQueued = true;
             }
@@ -71,13 +79,18 @@ namespace RaftProto.Player
 
         private void Update()
         {
+            swimming?.UpdateSwimState();
+            bool isSwimming = swimming != null && swimming.IsSwimming;
+
             Vector2 moveInput = _input.Player.Move.ReadValue<Vector2>();
             bool sprinting = _input.Player.Sprint.IsPressed();
 
             Vector3 moveDirection = CameraRelativeDirection(moveInput);
-            float speed = sprinting ? sprintSpeed : moveSpeed;
+            float speed = isSwimming
+                ? swimming.SwimMoveSpeed
+                : sprinting ? sprintSpeed : moveSpeed;
 
-            UpdateVerticalVelocity();
+            UpdateVerticalVelocity(isSwimming);
 
             Vector3 velocity = moveDirection * speed + Vector3.up * _verticalVelocity;
             _controller.Move(velocity * Time.deltaTime);
@@ -102,8 +115,21 @@ namespace RaftProto.Player
             return Vector3.ClampMagnitude(forward * input.y + right * input.x, 1f);
         }
 
-        private void UpdateVerticalVelocity()
+        private void UpdateVerticalVelocity(bool isSwimming)
         {
+            if (isSwimming)
+            {
+                _verticalVelocity = swimming.ApplySwimVertical(_verticalVelocity, Time.deltaTime);
+
+                if (_jumpQueued)
+                {
+                    _verticalVelocity = swimming.SwimJumpSpeed;
+                    _jumpQueued = false;
+                }
+
+                return;
+            }
+
             if (_controller.isGrounded && _verticalVelocity < 0f)
             {
                 // Small constant keeps the controller pressed onto the ground for a reliable isGrounded.

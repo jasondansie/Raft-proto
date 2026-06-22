@@ -5,9 +5,8 @@ using UnityEngine.InputSystem;
 namespace RaftProto.Building
 {
     /// <summary>
-    /// Local building preview and placement. Raycasts from the camera, shows a ghost tile,
-    /// and registers new deck tiles on the raft grid. In multiplayer this becomes client
-    /// preview + ServerRpc; only the server mutates RaftGrid.
+    /// Local building preview and placement. Requires build mode (B key for now; later a
+    /// hammer tool) before showing the ghost or accepting place/remove input.
     /// </summary>
     public class BuildingSystem : MonoBehaviour
     {
@@ -28,6 +27,10 @@ namespace RaftProto.Building
         [Tooltip("Max horizontal distance from the player to the target cell centre.")]
         [SerializeField] private float maxPlacementDistanceFromPlayer = 3.5f;
 
+        [Header("Build Mode")]
+        [Tooltip("Toggle build mode (stands in for having a hammer equipped until the tool system exists).")]
+        [SerializeField] private Key buildModeKey = Key.B;
+
         [Header("Removal (testing)")]
         [Tooltip("Test-only key to remove the targeted tile. Later this will be gated behind an axe tool.")]
         [SerializeField] private Key removeKey = Key.X;
@@ -43,6 +46,10 @@ namespace RaftProto.Building
         private Vector2Int _previewCell;
         private bool _hasPreview;
         private bool _hasTargetCell;
+        private bool _buildModeActive;
+
+        /// <summary>True while the player is in build mode (hammer equipped). Later driven by the tool system.</summary>
+        public bool IsBuildModeActive => _buildModeActive;
 
         private void Awake()
         {
@@ -70,6 +77,7 @@ namespace RaftProto.Building
         private void OnDisable()
         {
             _input.Player.Disable();
+            _buildModeActive = false;
             SetGhostVisible(false);
         }
 
@@ -91,6 +99,19 @@ namespace RaftProto.Building
                 return;
             }
 
+            if (Keyboard.current != null && Keyboard.current[buildModeKey].wasPressedThisFrame)
+            {
+                SetBuildModeActive(!_buildModeActive);
+            }
+
+            if (!_buildModeActive)
+            {
+                _hasTargetCell = false;
+                _hasPreview = false;
+                SetGhostVisible(false);
+                return;
+            }
+
             UpdatePreview();
 
             if (_input.Player.Interact.WasPressedThisFrame())
@@ -101,6 +122,18 @@ namespace RaftProto.Building
             if (Keyboard.current != null && Keyboard.current[removeKey].wasPressedThisFrame)
             {
                 TryRemoveTargetedTile();
+            }
+        }
+
+        private void SetBuildModeActive(bool active)
+        {
+            _buildModeActive = active;
+
+            if (!_buildModeActive)
+            {
+                _hasTargetCell = false;
+                _hasPreview = false;
+                SetGhostVisible(false);
             }
         }
 

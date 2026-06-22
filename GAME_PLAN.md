@@ -22,7 +22,7 @@ This is a good starting point: infrastructure is ready, and every system will be
 
 > Snapshot of what's actually built so you can continue on another machine. **Commit & push everything (including `Assets/Scripts/**` and `Assets/Materials/M_Ocean.mat`) before switching.** Unity will rebuild `Library/` on the new machine; empty asset folders (`Prefabs`, `Data`, `Art`) won't be in git until they contain assets — that's fine.
 
-**Phases 1 & 2 complete.** Next action: start **Phase 3 (survival/resources)** — floating debris, basic inventory, gather hook.
+**Phases 1 & 2 complete. Phase 3 implemented (pending playtest).** Next action: playtest spawning/pickup, then start **Phase 4 (inventory & crafting)** — the `ResourceCollector.Collected` event is the seam to hook inventory onto.
 
 **Done since last snapshot:**
 - **Phase 1.4 camera:** `FollowCamera.cs` in place.
@@ -495,10 +495,10 @@ Use this to track progress:
 - [x] **Milestone:** Expand raft by placing tiles
 
 ### Phase 3
-- [ ] Resource spawner
-- [ ] Drifting resource movement
-- [ ] Collection (pickup or hook MVP)
-- [ ] **Milestone:** Gather floating resources
+- [x] Resource spawner (`ResourceSpawner` — ring spawn upstream, current drift, cap + despawn)
+- [x] Drifting resource movement (`FloatingResource` — current drift + bob, single-winner `TryConsume`)
+- [x] Collection MVP (`ResourceCollector` — proximity auto-pickup, `Collected` event seam)
+- [ ] **Milestone:** Gather floating resources *(pending playtest)*
 
 ### Phase 4
 - [ ] ItemDefinition + RecipeDefinition ScriptableObjects

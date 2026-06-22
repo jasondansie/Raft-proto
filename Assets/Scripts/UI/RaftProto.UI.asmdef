@@ -3,7 +3,9 @@
     "rootNamespace": "RaftProto.UI",
     "references": [
         "RaftProto.Core",
-        "RaftProto.Items"
+        "RaftProto.Items",
+        "RaftProto.Resources",
+        "Unity.UGUI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
