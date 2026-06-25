@@ -9,5 +9,7 @@ namespace RaftProto.Items
         public const string Plastic = "plastic";
         public const string Scrap = "scrap";
         public const string Plank = "plank";
+        public const string Hammer = "hammer";
+        public const string Axe = "axe";
     }
 }

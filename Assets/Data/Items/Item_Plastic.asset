@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: RaftProto.Items::RaftProto.Items.ItemDefinition
   itemId: plastic
   displayName: Plastic
-  icon: {fileID: 21300000, guid: 3eb8f3949541ec542a589011f180965a, type: 3}
+  icon: {fileID: 21300000, guid: 23b5cd89a03ae874480a28d4812d2bbb, type: 3}
   maxStackSize: 20

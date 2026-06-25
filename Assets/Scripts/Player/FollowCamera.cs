@@ -1,3 +1,4 @@
+using RaftProto.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -129,6 +130,11 @@ namespace RaftProto.Player
 
         private void ApplyLookInput()
         {
+            if (GameplayUiGate.BlocksCameraLook)
+            {
+                return;
+            }
+
             Vector2 look = _input.Player.Look.ReadValue<Vector2>();
             _yaw += look.x * lookSensitivity;
             _pitch -= look.y * lookSensitivity;

@@ -14,3 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: RaftProto.Items::RaftProto.Items.RecipeCatalog
   recipes:
   - {fileID: 11400000, guid: 232cd7c3a6e6c184084ad09cdea86562, type: 2}
+  - {fileID: 11400000, guid: 2c4e6a8b0d2f4a6c8e0b2d4f6a8c0e20, type: 2}
+  - {fileID: 11400000, guid: 3d5f7b9c1e3a5b7d9f1c3e5a7b9d1f30, type: 2}

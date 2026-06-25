@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: RaftProto.Items::RaftProto.Items.ItemDefinition
   itemId: plank
   displayName: Plank
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 98280115613054848b017dde4ee31b41, type: 3}
   maxStackSize: 20

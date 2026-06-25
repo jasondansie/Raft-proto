@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 057478629b93df340ba160f977114cfa, type: 3}
+  m_Name: ItemIconGenerationConfig
+  m_EditorClassIdentifier: RaftProto.Editor::RaftProto.Editor.ItemIconGenerationConfig
+  resolution: 256
+  backgroundColor: {r: 0.25490198, g: 0.25490198, b: 0.25490198, a: 0}
+  padding: 1.15
+  outputFolder: Assets/Data/Icons
+  assignToItemDefinitions: 1
+  entries:
+  - enabled: 1
+    item: {fileID: 11400000, guid: 8b659ee6d1563ce4fadfd9080f870501, type: 2}
+    prefab: {fileID: 3729664633411996376, guid: 973d9769d6c428f49a708710412489b1, type: 3}
+    rotationEuler: {x: 10, y: -35, z: 0}
+  - enabled: 1
+    item: {fileID: 11400000, guid: 3d40d4f0b9e58d14385efe94a2e54e19, type: 2}
+    prefab: {fileID: 3116979041817946401, guid: e7584a8e8697a254598e587f00139a96, type: 3}
+    rotationEuler: {x: -10, y: 35, z: 0}
+  - enabled: 1
+    item: {fileID: 11400000, guid: 7698c0f409f00544192277cff786531e, type: 2}
+    prefab: {fileID: 2560529886805036718, guid: 87281bd252d2e3745aa9dc3a70c864bf, type: 3}
+    rotationEuler: {x: 20, y: -25, z: 0}
+  - enabled: 1
+    item: {fileID: 11400000, guid: 1fbe82139207ba54dbc5124d5418c465, type: 2}
+    prefab: {fileID: 2034365232753687665, guid: 59027c7e2e82a7f40ba056dd3728c41a, type: 3}
+    rotationEuler: {x: 55, y: -35, z: 0}
+  - enabled: 1
+    item: {fileID: 11400000, guid: f4a8c2e1b3d5476890abcdef12345678, type: 2}
+    prefab: {fileID: 1852739006085577888, guid: 1b884b448e5ede04bae6a168c71bf3e8, type: 3}
+    rotationEuler: {x: -15, y: 35, z: 0}
+  - enabled: 1
+    item: {fileID: 11400000, guid: 8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b, type: 2}
+    prefab: {fileID: 3594008506088358315, guid: 79efdc2f693e5b14abe584536fcd9bcc, type: 3}
+    rotationEuler: {x: -15, y: 35, z: 0}

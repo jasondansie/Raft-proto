@@ -7,12 +7,13 @@ using UnityEngine.InputSystem;
 namespace RaftProto.Building
 {
     /// <summary>
-    /// Local building preview and placement. Requires build mode (B key for now; later a
-    /// hammer tool) before showing the ghost or accepting place/remove input.
+    /// Local building preview and placement when the hammer is equipped; tile removal when the axe is equipped.
     /// </summary>
     public class BuildingSystem : MonoBehaviour, IBlocksResourcePickup
     {
-        bool IBlocksResourcePickup.BlocksResourcePickup => _buildModeActive;
+        bool IBlocksResourcePickup.BlocksResourcePickup =>
+            _toolState != null && (_toolState.IsHammerActive || _toolState.IsAxeActive);
+
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         [Header("References")]
@@ -30,14 +31,6 @@ namespace RaftProto.Building
         [Tooltip("Max horizontal distance from the player to the target cell centre.")]
         [SerializeField] private float maxPlacementDistanceFromPlayer = 3.5f;
 
-        [Header("Build Mode")]
-        [Tooltip("Toggle build mode (stands in for having a hammer equipped until the tool system exists).")]
-        [SerializeField] private Key buildModeKey = Key.B;
-
-        [Header("Removal (testing)")]
-        [Tooltip("Test-only key to remove the targeted tile. Later this will be gated behind an axe tool.")]
-        [SerializeField] private Key removeKey = Key.X;
-
         [Header("Placement Cost")]
         [SerializeField] private Inventory inventory;
         [SerializeField] private bool requirePlacementCost = true;
@@ -47,6 +40,7 @@ namespace RaftProto.Building
         [Header("Ghost Colors")]
         [SerializeField] private Color validGhostColor = new Color(0.2f, 0.9f, 0.3f, 0.45f);
         [SerializeField] private Color invalidGhostColor = new Color(0.9f, 0.2f, 0.2f, 0.35f);
+        [SerializeField] private Color removeGhostColor = new Color(0.95f, 0.55f, 0.15f, 0.5f);
 
         private InputSystem_Actions _input;
         private Transform _ghostRoot;
@@ -55,12 +49,11 @@ namespace RaftProto.Building
         private Vector2Int _previewCell;
         private bool _hasPreview;
         private bool _hasTargetCell;
-        private bool _buildModeActive;
         private ISwimStateProvider _swimState;
         private IResourceInteractPickup _resourceInteractPickup;
+        private IPlayerToolState _toolState;
 
-        /// <summary>True while the player is in build mode (hammer equipped). Later driven by the tool system.</summary>
-        public bool IsBuildModeActive => _buildModeActive;
+        public bool IsHammerActive => _toolState != null && _toolState.IsHammerActive;
 
         private void Awake()
         {
@@ -68,6 +61,7 @@ namespace RaftProto.Building
             _ghostPropertyBlock = new MaterialPropertyBlock();
             _swimState = GetComponent<ISwimStateProvider>();
             _resourceInteractPickup = GetComponent<IResourceInteractPickup>();
+            _toolState = GetComponent<IPlayerToolState>();
 
             if (cameraTransform == null && Camera.main != null)
             {
@@ -95,7 +89,6 @@ namespace RaftProto.Building
         private void OnDisable()
         {
             _input.Player.Disable();
-            _buildModeActive = false;
             SetGhostVisible(false);
         }
 
@@ -111,26 +104,13 @@ namespace RaftProto.Building
 
         private void Update()
         {
-            if (raftGrid == null || cameraTransform == null)
+            if (raftGrid == null || cameraTransform == null || _toolState == null)
             {
                 SetGhostVisible(false);
                 return;
             }
 
-            if (Keyboard.current != null && Keyboard.current[buildModeKey].wasPressedThisFrame)
-            {
-                if (_swimState == null || !_swimState.IsSwimming)
-                {
-                    SetBuildModeActive(!_buildModeActive);
-                }
-            }
-
-            if (_swimState != null && _swimState.IsSwimming && _buildModeActive)
-            {
-                SetBuildModeActive(false);
-            }
-
-            if (!_buildModeActive)
+            if (_swimState != null && _swimState.IsSwimming)
             {
                 _hasTargetCell = false;
                 _hasPreview = false;
@@ -138,22 +118,42 @@ namespace RaftProto.Building
                 return;
             }
 
-            UpdatePreview();
-
-            if (Keyboard.current != null && Keyboard.current[removeKey].wasPressedThisFrame)
+            if (_toolState.IsHammerActive)
             {
-                TryRemoveTargetedTile();
+                UpdatePlacementPreview();
+                return;
             }
+
+            if (_toolState.IsAxeActive)
+            {
+                UpdateRemovalPreview();
+                return;
+            }
+
+            _hasTargetCell = false;
+            _hasPreview = false;
+            SetGhostVisible(false);
         }
 
         private void LateUpdate()
         {
-            if (!_buildModeActive || raftGrid == null || cameraTransform == null)
+            if (raftGrid == null || cameraTransform == null || _toolState == null)
             {
                 return;
             }
 
             if (!_input.Player.Interact.WasPressedThisFrame())
+            {
+                return;
+            }
+
+            if (_toolState.IsAxeActive)
+            {
+                TryRemoveTargetedTile();
+                return;
+            }
+
+            if (!_toolState.IsHammerActive)
             {
                 return;
             }
@@ -167,19 +167,7 @@ namespace RaftProto.Building
             TryPlacePreviewedTile();
         }
 
-        private void SetBuildModeActive(bool active)
-        {
-            _buildModeActive = active;
-
-            if (!_buildModeActive)
-            {
-                _hasTargetCell = false;
-                _hasPreview = false;
-                SetGhostVisible(false);
-            }
-        }
-
-        private void UpdatePreview()
+        private void UpdatePlacementPreview()
         {
             Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
 
@@ -196,35 +184,74 @@ namespace RaftProto.Building
             bool isValid = IsValidPlacement(targetCell);
             _hasPreview = isValid;
 
-            _ghostRoot.SetParent(raftGrid.transform, false);
-            _ghostRoot.localPosition = raftGrid.CellToLocal(targetCell);
-            _ghostRoot.localRotation = Quaternion.identity;
-
+            PositionGhost(targetCell);
             SetGhostColor(isValid ? validGhostColor : invalidGhostColor);
             SetGhostVisible(true);
         }
 
-    private bool TryGetTargetCell(Ray ray, out Vector2Int targetCell)
-    {
-        targetCell = default;
-
-        // Project the aim ray onto the raft's deck plane. Using the grid's own up/origin
-        // keeps this correct while the raft bobs and tilts, and lets us aim at empty water
-        // cells next to the raft instead of needing the crosshair on an existing tile.
-        Plane deckPlane = new Plane(raftGrid.transform.up, raftGrid.transform.position);
-
-        if (!deckPlane.Raycast(ray, out float enter) || enter > maxRayDistance)
+        private void UpdateRemovalPreview()
         {
-            return false;
+            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+
+            if (!TryGetTargetCell(ray, out Vector2Int targetCell))
+            {
+                _hasTargetCell = false;
+                SetGhostVisible(false);
+                return;
+            }
+
+            _previewCell = targetCell;
+            _hasTargetCell = true;
+
+            bool canRemove = CanRemoveTile(targetCell);
+            _hasPreview = canRemove;
+
+            if (!canRemove)
+            {
+                SetGhostVisible(false);
+                return;
+            }
+
+            PositionGhost(targetCell);
+            SetGhostColor(removeGhostColor);
+            SetGhostVisible(true);
         }
 
-        targetCell = raftGrid.WorldToCell(ray.GetPoint(enter));
-        return true;
-    }
+        private void PositionGhost(Vector2Int cell)
+        {
+            _ghostRoot.SetParent(raftGrid.transform, false);
+            _ghostRoot.localPosition = raftGrid.CellToLocal(cell);
+            _ghostRoot.localRotation = Quaternion.identity;
+        }
+
+        private bool TryGetTargetCell(Ray ray, out Vector2Int targetCell)
+        {
+            targetCell = default;
+
+            Plane deckPlane = new Plane(raftGrid.transform.up, raftGrid.transform.position);
+
+            if (!deckPlane.Raycast(ray, out float enter) || enter > maxRayDistance)
+            {
+                return false;
+            }
+
+            targetCell = raftGrid.WorldToCell(ray.GetPoint(enter));
+            return true;
+        }
 
         private bool IsValidPlacement(Vector2Int cell)
         {
             return raftGrid.CanPlaceTile(cell) && IsWithinReach(cell) && CanAffordPlacementCost();
+        }
+
+        private bool CanRemoveTile(Vector2Int cell)
+        {
+            if (!raftGrid.HasTile(cell) || !IsWithinReach(cell))
+            {
+                return false;
+            }
+
+            return raftGrid.Tiles.Count > 1;
         }
 
         private bool CanAffordPlacementCost()
@@ -247,8 +274,6 @@ namespace RaftProto.Building
             return inventory.TryRemoveItem(placementItemId, placementItemCost);
         }
 
-        // Horizontal reach only: the player capsule sits ~1m above the deck, so including
-        // the vertical gap would shrink the usable reach and make edge tiles feel unreachable.
         private bool IsWithinReach(Vector2Int cell)
         {
             Vector3 toCell = raftGrid.CellToWorld(cell) - playerTransform.position;
@@ -287,18 +312,7 @@ namespace RaftProto.Building
 
         private void TryRemoveTargetedTile()
         {
-            if (!_hasTargetCell || !raftGrid.HasTile(_previewCell))
-            {
-                return;
-            }
-
-            if (!IsWithinReach(_previewCell))
-            {
-                return;
-            }
-
-            // Keep at least one tile so the raft doesn't lose all buoyancy and sink.
-            if (raftGrid.Tiles.Count <= 1)
+            if (!_hasPreview || !CanRemoveTile(_previewCell))
             {
                 return;
             }
@@ -330,7 +344,7 @@ namespace RaftProto.Building
             return tileObject;
         }
 
-    private void CreateGhost()
+        private void CreateGhost()
         {
             if (deckTilePrefab != null)
             {

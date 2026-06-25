@@ -1,12 +1,12 @@
 {
-    "name": "RaftProto.Player",
-    "rootNamespace": "RaftProto.Player",
+    "name": "RaftProto.Editor",
+    "rootNamespace": "RaftProto.Editor",
     "references": [
-        "RaftProto.Core",
-        "RaftProto.Items",
-        "Unity.InputSystem"
+        "RaftProto.Items"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

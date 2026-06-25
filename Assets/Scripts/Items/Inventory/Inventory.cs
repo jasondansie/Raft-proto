@@ -15,6 +15,9 @@ namespace RaftProto.Items
 
         public event System.Action Changed;
 
+        /// <summary>Fired when an item type goes from zero to at least one in the bag.</summary>
+        public event System.Action<string> ItemFirstAcquired;
+
         public IReadOnlyDictionary<string, int> Stacks => _stacks;
 
         public int GetCount(string itemId)
@@ -61,7 +64,14 @@ namespace RaftProto.Items
                 return false;
             }
 
+            bool firstAcquire = current <= 0 && updated > 0;
             _stacks[itemId] = updated;
+
+            if (firstAcquire)
+            {
+                ItemFirstAcquired?.Invoke(itemId);
+            }
+
             Changed?.Invoke();
             return true;
         }
