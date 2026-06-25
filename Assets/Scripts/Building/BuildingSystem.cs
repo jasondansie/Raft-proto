@@ -1,4 +1,5 @@
 using RaftProto.Core;
+using RaftProto.Items;
 using RaftProto.Raft;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -37,6 +38,12 @@ namespace RaftProto.Building
         [Tooltip("Test-only key to remove the targeted tile. Later this will be gated behind an axe tool.")]
         [SerializeField] private Key removeKey = Key.X;
 
+        [Header("Placement Cost")]
+        [SerializeField] private Inventory inventory;
+        [SerializeField] private bool requirePlacementCost = true;
+        [SerializeField] private string placementItemId = ItemIds.Plank;
+        [SerializeField] private int placementItemCost = 1;
+
         [Header("Ghost Colors")]
         [SerializeField] private Color validGhostColor = new Color(0.2f, 0.9f, 0.3f, 0.45f);
         [SerializeField] private Color invalidGhostColor = new Color(0.9f, 0.2f, 0.2f, 0.35f);
@@ -50,6 +57,7 @@ namespace RaftProto.Building
         private bool _hasTargetCell;
         private bool _buildModeActive;
         private ISwimStateProvider _swimState;
+        private IResourceInteractPickup _resourceInteractPickup;
 
         /// <summary>True while the player is in build mode (hammer equipped). Later driven by the tool system.</summary>
         public bool IsBuildModeActive => _buildModeActive;
@@ -59,6 +67,7 @@ namespace RaftProto.Building
             _input = new InputSystem_Actions();
             _ghostPropertyBlock = new MaterialPropertyBlock();
             _swimState = GetComponent<ISwimStateProvider>();
+            _resourceInteractPickup = GetComponent<IResourceInteractPickup>();
 
             if (cameraTransform == null && Camera.main != null)
             {
@@ -68,6 +77,11 @@ namespace RaftProto.Building
             if (playerTransform == null)
             {
                 playerTransform = transform;
+            }
+
+            if (inventory == null)
+            {
+                inventory = GetComponent<Inventory>();
             }
 
             CreateGhost();
@@ -126,15 +140,31 @@ namespace RaftProto.Building
 
             UpdatePreview();
 
-            if (_input.Player.Interact.WasPressedThisFrame())
-            {
-                TryPlacePreviewedTile();
-            }
-
             if (Keyboard.current != null && Keyboard.current[removeKey].wasPressedThisFrame)
             {
                 TryRemoveTargetedTile();
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (!_buildModeActive || raftGrid == null || cameraTransform == null)
+            {
+                return;
+            }
+
+            if (!_input.Player.Interact.WasPressedThisFrame())
+            {
+                return;
+            }
+
+            // Pickup runs in ResourceCollector.Update; defer placement if E collected something.
+            if (_resourceInteractPickup != null && _resourceInteractPickup.LastInteractCollected)
+            {
+                return;
+            }
+
+            TryPlacePreviewedTile();
         }
 
         private void SetBuildModeActive(bool active)
@@ -194,7 +224,27 @@ namespace RaftProto.Building
 
         private bool IsValidPlacement(Vector2Int cell)
         {
-            return raftGrid.CanPlaceTile(cell) && IsWithinReach(cell);
+            return raftGrid.CanPlaceTile(cell) && IsWithinReach(cell) && CanAffordPlacementCost();
+        }
+
+        private bool CanAffordPlacementCost()
+        {
+            if (!requirePlacementCost || inventory == null || placementItemCost <= 0)
+            {
+                return true;
+            }
+
+            return inventory.HasItem(placementItemId, placementItemCost);
+        }
+
+        private bool TryConsumePlacementCost()
+        {
+            if (!requirePlacementCost || inventory == null || placementItemCost <= 0)
+            {
+                return true;
+            }
+
+            return inventory.TryRemoveItem(placementItemId, placementItemCost);
         }
 
         // Horizontal reach only: the player capsule sits ~1m above the deck, so including
@@ -222,6 +272,16 @@ namespace RaftProto.Building
             if (!raftGrid.RegisterTile(_previewCell, tileObject.transform))
             {
                 Destroy(tileObject);
+                return;
+            }
+
+            if (!TryConsumePlacementCost())
+            {
+                raftGrid.RemoveTile(_previewCell, out Transform rollbackRoot);
+                if (rollbackRoot != null)
+                {
+                    Destroy(rollbackRoot.gameObject);
+                }
             }
         }
 

@@ -5,6 +5,7 @@
         "RaftProto.Core",
         "RaftProto.Items",
         "RaftProto.Resources",
+        "Unity.InputSystem",
         "Unity.UGUI"
     ],
     "includePlatforms": [],

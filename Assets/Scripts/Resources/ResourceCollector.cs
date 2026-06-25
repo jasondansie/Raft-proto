@@ -13,12 +13,9 @@ namespace RaftProto.Resources
 
     /// <summary>
     /// Collects floating resources via Interact (default), optional proximity, or both.
-    /// Blocked while <see cref="IBlocksResourcePickup"/> is active (build mode). In multiplayer
-    /// this becomes a server-validated CollectServerRpc.
-    ///
-    /// Prefabs are assigned on <see cref="ResourceSpawner"/> spawn entries, not here.
+    /// Interact pickup works in build mode; the hook respects <see cref="IBlocksResourcePickup"/>.
     /// </summary>
-    public class ResourceCollector : MonoBehaviour
+    public class ResourceCollector : MonoBehaviour, IResourceInteractPickup
     {
         [SerializeField] private ResourcePickupMode pickupMode = ResourcePickupMode.Interact;
 
@@ -33,6 +30,7 @@ namespace RaftProto.Resources
         [SerializeField] private Transform cameraTransform;
 
         public event System.Action<ResourceType> Collected;
+        public bool LastInteractCollected { get; private set; }
 
         private InputSystem_Actions _input;
         private Collider[] _buffer;
@@ -67,29 +65,52 @@ namespace RaftProto.Resources
 
         private void Update()
         {
-            if (IsPickupBlocked())
-            {
-                return;
-            }
+            LastInteractCollected = false;
 
             if (pickupMode == ResourcePickupMode.Interact || pickupMode == ResourcePickupMode.Both)
             {
                 if (_input.Player.Interact.WasPressedThisFrame())
                 {
-                    TryCollectBestInRange(preferAim: true);
+                    LastInteractCollected = TryCollectBestInRange(preferAim: true, respectBuildBlock: false);
                 }
             }
 
             if (pickupMode == ResourcePickupMode.Proximity || pickupMode == ResourcePickupMode.Both)
             {
-                TryCollectBestInRange(preferAim: false);
+                if (IsPickupBlocked())
+                {
+                    return;
+                }
+
+                TryCollectBestInRange(preferAim: false, respectBuildBlock: true);
             }
         }
 
         /// <summary>Used by <see cref="ResourceHook"/> when a reeled resource reaches the player.</summary>
         public bool TryCollect(FloatingResource resource)
         {
-            if (resource == null || IsPickupBlocked())
+            return TryCollectResource(resource, respectBuildBlock: true);
+        }
+
+        private bool TryCollectBestInRange(bool preferAim, bool respectBuildBlock)
+        {
+            FloatingResource best = FindBestResource(preferAim);
+            if (best == null)
+            {
+                return false;
+            }
+
+            return TryCollectResource(best, respectBuildBlock);
+        }
+
+        private bool TryCollectResource(FloatingResource resource, bool respectBuildBlock)
+        {
+            if (resource == null)
+            {
+                return false;
+            }
+
+            if (respectBuildBlock && IsPickupBlocked())
             {
                 return false;
             }
@@ -102,15 +123,6 @@ namespace RaftProto.Resources
             }
 
             return false;
-        }
-
-        private void TryCollectBestInRange(bool preferAim)
-        {
-            FloatingResource best = FindBestResource(preferAim);
-            if (best != null)
-            {
-                TryCollect(best);
-            }
         }
 
         private FloatingResource FindBestResource(bool preferAim)

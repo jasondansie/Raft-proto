@@ -888,6 +888,70 @@ MonoBehaviour:
   - {fileID: 612702424}
   - {fileID: 953953907}
   logRegisteredCellsOnAwake: 1
+--- !u!1 &1622117997
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1622117999}
+  - component: {fileID: 1622117998}
+  m_Layer: 0
+  m_Name: 'ResourceSpawner '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1622117998
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622117997}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddefbcde00b523d4283424a671cfd1a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Resources::RaftProto.Resources.ResourceSpawner
+  target: {fileID: 1511892639}
+  spawnEntries:
+  - visualPrefab: {fileID: 3729664633411996376, guid: 973d9769d6c428f49a708710412489b1, type: 3}
+    resourceType: 0
+    spawnWeight: 1
+  - visualPrefab: {fileID: 3116979041817946401, guid: e7584a8e8697a254598e587f00139a96, type: 3}
+    resourceType: 1
+    spawnWeight: 1
+  - visualPrefab: {fileID: 2560529886805036718, guid: 87281bd252d2e3745aa9dc3a70c864bf, type: 3}
+    resourceType: 2
+    spawnWeight: 1
+  spawnInterval: 2
+  maxAlive: 20
+  prewarmPerType: 4
+  spawnRadius: 30
+  despawnRadius: 45
+  deriveCurrentFromTargetForward: 1
+  currentDirection: {x: -1, y: 0, z: -0.3}
+  driftSpeed: 1.5
+  waterLevel: 0
+--- !u!4 &1622117999
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622117997}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.53908, y: 0, z: 4.04092}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1709426923
 GameObject:
   m_ObjectHideFlags: 0
@@ -1060,6 +1124,14 @@ GameObject:
   - component: {fileID: 2019439987}
   - component: {fileID: 2019439991}
   - component: {fileID: 2019439992}
+  - component: {fileID: 2019439993}
+  - component: {fileID: 2019439995}
+  - component: {fileID: 2019439996}
+  - component: {fileID: 2019439997}
+  - component: {fileID: 2019440000}
+  - component: {fileID: 2019439999}
+  - component: {fileID: 2019440001}
+  - component: {fileID: 2019440002}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1176,6 +1248,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 061c0d0b48450e947b5814144a19542c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: RaftProto.Player::RaftProto.Player.PlayerController
+  swimming: {fileID: 0}
   moveSpeed: 4
   sprintSpeed: 7
   rotationSpeed: 12
@@ -1201,8 +1274,150 @@ MonoBehaviour:
   deckLocalScale: {x: 1, y: 1, z: 1}
   maxRayDistance: 5
   maxPlacementDistanceFromPlayer: 3.5
+  buildModeKey: 16
+  removeKey: 38
+  inventory: {fileID: 0}
+  requirePlacementCost: 1
+  placementItemId: plank
+  placementItemCost: 1
   validGhostColor: {r: 0.2, g: 0.9, b: 0.3, a: 0.45}
   invalidGhostColor: {r: 0.9, g: 0.2, b: 0.2, a: 0.35}
+--- !u!114 &2019439993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f046e284a7ab9214ca8d4c45bcebbef1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Resources::RaftProto.Resources.ResourceCollector
+  pickupMode: 0
+  collectRange: 2.5
+  maxConsidered: 16
+  cameraTransform: {fileID: 0}
+--- !u!114 &2019439995
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b56dbd0fd8f18ea40993def806729594, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Player::RaftProto.Player.PlayerSwimming
+  waterLevel: 0
+  swimMoveSpeed: 2.5
+  swimJumpSpeed: 4
+  swimCenterHeight: 0.55
+  buoyancyStrength: 12
+  waterDrag: 4
+  maxSinkSpeed: 2.5
+--- !u!114 &2019439996
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 595c6693f58ba2941a78781b58a80ea3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Resources::RaftProto.Resources.ResourceHook
+  cameraTransform: {fileID: 0}
+  collector: {fileID: 0}
+  hookVisualPrefab: {fileID: 4321255552914548203, guid: 160fa74ad1c980b4a8d8727efd3ae33a, type: 3}
+  hookMount: {fileID: 0}
+  lineOrigin: {fileID: 0}
+  hookLocalPosition: {x: 0.35, y: -0.3, z: 0.55}
+  hookLocalEuler: {x: 15, y: -25, z: 0}
+  lineOriginLocalOffset: {x: 0, y: 0.05, z: 0.45}
+  hookRange: 14
+  pullSpeed: 5
+  collectRange: 2
+  aimConeHalfAngle: 12
+  hookMask:
+    serializedVersion: 2
+    m_Bits: 51
+  lineRenderer: {fileID: 0}
+  lineWidth: 0.03
+--- !u!114 &2019439997
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a30dfef61184514f825ce30b4916c44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.UI::RaftProto.UI.CrosshairHUD
+  color: {r: 1, g: 1, b: 1, a: 0.9}
+  armLength: 10
+  thickness: 2
+  gap: 4
+--- !u!114 &2019439999
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6ffaab87a60cef4b9957fc85ad2196c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Resources::RaftProto.Resources.ResourceInventoryBridge
+  collector: {fileID: 0}
+  inventory: {fileID: 0}
+--- !u!114 &2019440000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21ddbb9bbac6fe644bf3f2e31afc9123, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Items::RaftProto.Items.Inventory
+  catalog: {fileID: 11400000, guid: 189d7e635f745294bafe4cbd5a812b0d, type: 2}
+--- !u!114 &2019440001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 522881c3f278d82469578b4bba33847e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Items::RaftProto.Items.CraftingSystem
+  inventory: {fileID: 0}
+--- !u!114 &2019440002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ee12400c54bae747bde5ba1d0c8cfee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.UI::RaftProto.UI.GameplayUI
+  inventory: {fileID: 2019440000}
+  itemCatalog: {fileID: 11400000, guid: 189d7e635f745294bafe4cbd5a812b0d, type: 2}
+  recipeCatalog: {fileID: 11400000, guid: c1f4bff2ecd6cb24a99ad749a7623626, type: 2}
+  craftingSystem: {fileID: 2019440001}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1212,3 +1427,4 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 1118320767}
   - {fileID: 1511892639}
+  - {fileID: 1622117999}
