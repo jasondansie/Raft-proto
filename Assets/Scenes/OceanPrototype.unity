@@ -1132,6 +1132,8 @@ GameObject:
   - component: {fileID: 2019439999}
   - component: {fileID: 2019440001}
   - component: {fileID: 2019440002}
+  - component: {fileID: 2019440003}
+  - component: {fileID: 2019440004}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1274,14 +1276,13 @@ MonoBehaviour:
   deckLocalScale: {x: 1, y: 1, z: 1}
   maxRayDistance: 5
   maxPlacementDistanceFromPlayer: 3.5
-  buildModeKey: 16
-  removeKey: 38
   inventory: {fileID: 0}
   requirePlacementCost: 1
   placementItemId: plank
   placementItemCost: 1
   validGhostColor: {r: 0.2, g: 0.9, b: 0.3, a: 0.45}
   invalidGhostColor: {r: 0.9, g: 0.2, b: 0.2, a: 0.35}
+  removeGhostColor: {r: 0.95, g: 0.55, b: 0.15, a: 0.5}
 --- !u!114 &2019439993
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1415,9 +1416,38 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: RaftProto.UI::RaftProto.UI.GameplayUI
   inventory: {fileID: 2019440000}
+  hotbar: {fileID: 0}
   itemCatalog: {fileID: 11400000, guid: 189d7e635f745294bafe4cbd5a812b0d, type: 2}
   recipeCatalog: {fileID: 11400000, guid: c1f4bff2ecd6cb24a99ad749a7623626, type: 2}
   craftingSystem: {fileID: 2019440001}
+--- !u!114 &2019440003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8742424618a0054ca8dd18164bd030b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Player::RaftProto.Player.PlayerToolController
+  inventory: {fileID: 2019440000}
+  hotbar: {fileID: 0}
+--- !u!114 &2019440004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019439986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32fc0ad3876b30948bf7cb924f3d8a7e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RaftProto.Items::RaftProto.Items.Hotbar
+  inventory: {fileID: 2019440000}
+  slotCount: 8
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
